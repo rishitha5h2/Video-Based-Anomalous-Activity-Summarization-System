@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VIGIL Report — {{ video_name }}</title>
+<style>
+  :root {
+    --accent: #e8453c; --teal: #00c9b1; --amber: #f5a623;
+    --dark: #080b10; --text: #1a2535; --muted: #5a7a99;
+    --border: #d0dce8; --bg: #f4f7fb; --white: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+
+  .page { max-width: 900px; margin: 0 auto; background: var(--white); box-shadow: 0 2px 20px rgba(0,0,0,.1); }
+
+  /* Header */
+  .header { background: var(--dark); color: #fff; padding: 32px 40px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .header-logo { font-size: 28px; font-weight: 900; letter-spacing: 4px; color: var(--accent); }
+  .header-sub  { font-size: 12px; color: #8da4bf; letter-spacing: 2px; margin-top: 4px; }
+  .header-meta { text-align: right; font-size: 11px; color: #8da4bf; line-height: 1.8; font-family: 'Courier New', monospace; }
+
+  /* Verdict */
+  .verdict { padding: 20px 40px; display: flex; align-items: center; gap: 16px; border-bottom: 3px solid; }
+  .verdict.anomalous { background: #fff0f0; border-color: var(--accent); }
+  .verdict.normal    { background: #f0fff8; border-color: var(--teal); }
+  .verdict-icon { font-size: 36px; }
+  .verdict-text { flex: 1; }
+  .verdict-title { font-size: 18px; font-weight: 800; }
+  .verdict.anomalous .verdict-title { color: var(--accent); }
+  .verdict.normal    .verdict-title { color: var(--teal); }
+  .verdict-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .stat-row { display: flex; gap: 8px; }
+  .stat-pill { background: var(--dark); color: #fff; padding: 8px 14px; border-radius: 6px; text-align: center; }
+  .stat-pill .v { font-size: 18px; font-weight: 800; font-family: 'Courier New', monospace; color: var(--accent); }
+  .stat-pill .l { font-size: 9px; letter-spacing: 1px; color: #8da4bf; text-transform: uppercase; }
+
+  /* Sections */
+  .section { padding: 28px 40px; border-bottom: 1px solid var(--border); }
+  .section-title { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+  /* Info grid */
+  .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .info-cell { background: var(--bg); border-radius: 6px; padding: 12px; }
+  .info-cell .k { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+  .info-cell .v { font-family: 'Courier New', monospace; font-size: 13px; color: var(--teal); font-weight: 600; }
+
+  /* Summary */
+  .summary-box { background: var(--bg); border-left: 3px solid #3b82f6; border-radius: 0 6px 6px 0; padding: 16px 20px; line-height: 1.75; color: var(--text); }
+
+  /* Timeline table */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: var(--accent); color: #fff; padding: 10px 12px; text-align: left; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  tr:nth-child(even) td { background: var(--bg); }
+  .badge-high { background: #fde8e8; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 700; }
+  .badge-med  { background: #fff5e0; color: var(--amber); border: 1px solid var(--amber); border-radius: 4px; padding: 1px 6px; font-size: 10px; }
+  .badge-low  { background: #e8fdf6; color: var(--teal); border: 1px solid var(--teal); border-radius: 4px; padding: 1px 6px; font-size: 10px; }
+
+  /* Incident cards */
+  .incident-card { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 6px; padding: 18px 20px; margin-bottom: 16px; }
+  .incident-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .incident-title { font-size: 14px; font-weight: 800; color: var(--accent); }
+  .incident-time  { font-family: 'Courier New', monospace; font-size: 12px; color: var(--muted); }
+  .incident-meta  { display: flex; gap: 20px; font-size: 11px; color: var(--muted); margin-bottom: 10px; font-family: 'Courier New', monospace; }
+  .incident-meta b { color: var(--amber); }
+  .incident-narrative { font-size: 13px; line-height: 1.65; color: var(--text); margin-bottom: 10px; }
+  .incident-rec { background: #fffbf0; border-left: 3px solid var(--amber); padding: 10px 14px; font-size: 12px; color: #7a5800; border-radius: 0 4px 4px 0; }
+  .conf-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 10px; }
+  .conf-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent), var(--amber)); }
+
+  /* Frames */
+  .frames-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+  .frame-thumb { border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+  .frame-thumb img { width: 100%; height: 120px; object-fit: cover; display: block; }
+  .frame-thumb .ft { font-size: 10px; color: var(--muted); font-family: 'Courier New', monospace; padding: 4px 8px; background: var(--bg); }
+
+  /* Footer */
+  .footer { background: var(--dark); color: #8da4bf; padding: 16px 40px; display: flex; justify-content: space-between; font-size: 11px; font-family: 'Courier New', monospace; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="header-logo">VIGIL</div>
+      <div class="header-sub">VIDEO ANOMALY DETECTION REPORT</div>
+    </div>
+    <div class="header-meta">
+      Generated : {{ generated_at }}<br/>
+      Version   : {{ system_version }}<br/>
+      Risk Level: <span style="color:{% if risk_level == 'CRITICAL' %}#e8453c{% elif risk_level == 'HIGH' %}#f5a623{% else %}#00c9b1{% endif %}">{{ risk_level }}</span>
+    </div>
+  </div>
+
+  <!-- VERDICT -->
+  <div class="verdict {{ 'anomalous' if is_anomalous else 'normal' }}">
+    <div class="verdict-icon">{{ '🚨' if is_anomalous else '✅' }}</div>
+    <div class="verdict-text">
+      <div class="verdict-title">{{ 'ANOMALOUS ACTIVITY DETECTED' if is_anomalous else 'NO ANOMALIES DETECTED' }}</div>
+      <div class="verdict-sub">{{ incident_count }} incident(s) found in {{ video_name }}</div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-pill"><div class="v">{{ incident_count }}</div><div class="l">Incidents</div></div>
+      <div class="stat-pill"><div class="v" style="color:#00c9b1">{{ duration_fmt }}</div><div class="l">Duration</div></div>
+      <div class="stat-pill"><div class="v" style="color:#f5a623">{{ (max_confidence * 100)|int }}%</div><div class="l">Max Conf</div></div>
+    </div>
+  </div>
+
+  <!-- VIDEO INFO -->
+  <div class="section">
+    <div class="section-title">📊 Video Information</div>
+    <div class="info-grid">
+      <div class="info-cell"><div class="k">File Name</div><div class="v">{{ video_name }}</div></div>
+      <div class="info-cell"><div class="k">Duration</div><div class="v">{{ duration_fmt }}</div></div>
+      <div class="info-cell"><div class="k">Resolution</div><div class="v">{{ resolution }}</div></div>
+      <div class="info-cell"><div class="k">Frame Rate</div><div class="v">{{ fps }} fps</div></div>
+      <div class="info-cell"><div class="k">Frames Analysed</div><div class="v">{{ frame_count }}</div></div>
+      <div class="info-cell"><div class="k">Processing Time</div><div class="v">{{ processing_time }}s</div></div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="section">
+    <div class="section-title">📝 Executive Summary</div>
+    <div class="summary-box">{{ summary | replace('\n', '<br/>') }}</div>
+  </div>
+
+  <!-- TIMELINE TABLE -->
+  {% if incidents %}
+  <div class="section">
+    <div class="section-title">⏱ Incident Timeline</div>
+    <table>
+      <tr><th>#</th><th>Type</th><th>Start</th><th>End</th><th>Duration</th><th>Confidence</th><th>Persons</th><th>Risk</th></tr>
+      {% for inc in incidents %}
+      <tr>
+        <td>{{ inc.id }}</td>
+        <td><strong>{{ inc.type | upper }}</strong></td>
+        <td style="font-family:monospace">{{ inc.start_fmt }}</td>
+        <td style="font-family:monospace">{{ inc.end_fmt }}</td>
+        <td>{{ inc.duration | round(1) }}s</td>
+        <td>{{ (inc.confidence * 100)|int }}%</td>
+        <td>{{ inc.num_persons }}</td>
+        <td>
+          {% if inc.confidence >= 0.75 %}<span class="badge-high">HIGH</span>
+          {% elif inc.confidence >= 0.5 %}<span class="badge-med">MEDIUM</span>
+          {% else %}<span class="badge-low">LOW</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <!-- PER-INCIDENT DETAILS -->
+  <div class="section">
+    <div class="section-title">🔍 Detailed Incident Reports</div>
+    {% for inc in incidents %}
+    <div class="incident-card">
+      <div class="incident-header">
+        <div>
+          <div class="incident-title">Incident #{{ inc.id }} — {{ inc.type | upper }}</div>
+          <div class="incident-time">{{ inc.start_fmt }} → {{ inc.end_fmt }}</div>
+        </div>
+        {% if inc.confidence >= 0.75 %}<span class="badge-high">HIGH RISK</span>
+        {% elif inc.confidence >= 0.5 %}<span class="badge-med">MEDIUM RISK</span>
+        {% else %}<span class="badge-low">LOW RISK</span>{% endif %}
+      </div>
+      <div class="incident-meta">
+        <span>CONF: <b>{{ (inc.confidence*100)|int }}%</b></span>
+        <span>DURATION: <b>{{ inc.duration|round(1) }}s</b></span>
+        <span>PERSONS: <b>{{ inc.num_persons }}</b></span>
+        <span>PEAK SCORE: <b>{{ inc.peak_anomaly_score }}</b></span>
+      </div>
+      <div class="incident-narrative">{{ inc.narrative }}</div>
+      <div class="incident-rec">⚠ <strong>Action:</strong> {{ inc.recommendation }}</div>
+      <div class="conf-bar-wrap"><div class="conf-bar-fill" style="width:{{ (inc.confidence*100)|int }}%"></div></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span>VIGIL v{{ system_version }} — Confidential Security Report</span>
+    <span>{{ generated_at }}</span>
+  </div>
+
+</div>
+</body>
+</html>

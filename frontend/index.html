@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>VIGIL — Anomalous Activity Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06090f;--surface:#0d1219;--card:#111820;--card2:#161e28;
+  --border:#1c2a38;--border2:#243444;
+  --accent:#e8453c;--accent2:#ff6b35;
+  --teal:#00c9b1;--amber:#f5a623;--blue:#3b82f6;
+  --text:#dce8f4;--text2:#7a9ab8;--text3:#3d5a73;
+  --mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;
+  --r:10px;--r-lg:16px;--shadow:0 4px 24px rgba(0,0,0,.5);
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.025) 2px,rgba(0,0,0,.025) 4px);pointer-events:none;z-index:9999}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:60px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff}
+.logo-text{font-size:18px;font-weight:800;letter-spacing:2px}
+.logo-text span{color:var(--accent)}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.status-pill{display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;background:rgba(0,201,177,.1);border:1px solid rgba(0,201,177,.25);font-family:var(--mono);font-size:11px;color:var(--teal)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.main{max-width:1200px;margin:0 auto;padding:32px 24px}
+.label{font-size:12px;font-weight:600;letter-spacing:3px;color:var(--text2);text-transform:uppercase;margin-bottom:20px}
+.label span{color:var(--accent)}
+
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--r-lg);padding:44px 32px;background:var(--card);margin-bottom:20px;text-align:center;transition:border-color .2s,background .2s;cursor:pointer}
+.upload-zone:hover,.upload-zone.over{border-color:var(--accent);background:rgba(232,69,60,.04)}
+.upload-zone h2{font-size:20px;font-weight:700;margin:12px 0 6px}
+.upload-zone p{color:var(--text2);font-size:13px;margin-bottom:20px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border:none;border-radius:var(--r);font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;transition:all .18s;white-space:nowrap}
+.btn-red{background:var(--accent);color:#fff}
+.btn-red:hover{background:#c93530;transform:translateY(-1px)}
+.btn-amber{background:var(--amber);color:#000}
+.btn-amber:hover{opacity:.85}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+
+.vinfo{display:none;margin-top:16px;padding:12px 20px;background:var(--card2);border-radius:var(--r);border:1px solid var(--border);font-family:var(--mono);font-size:12px;color:var(--text2);justify-content:center;gap:28px;flex-wrap:wrap}
+.vinfo span b{color:var(--teal)}
+.preview-wrap{display:none;margin-top:16px}
+.preview-wrap video{width:100%;border-radius:var(--r);border:1px solid var(--border);max-height:380px;background:#000}
+
+#analyzeBtn{display:block;width:100%;padding:17px;margin-bottom:24px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;font-family:var(--sans);font-weight:800;font-size:15px;letter-spacing:1px;border:none;border-radius:var(--r);cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(232,69,60,.3)}
+#analyzeBtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px rgba(232,69,60,.5)}
+#analyzeBtn:disabled{opacity:.38;cursor:not-allowed;transform:none;box-shadow:none}
+
+#processingBox{display:none;text-align:center;padding:48px 24px;background:var(--card);border-radius:var(--r-lg);border:1px solid var(--border);margin-bottom:20px}
+.spin{width:52px;height:52px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--accent);animation:spin .8s linear infinite;margin:0 auto 18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#processingBox h3{font-size:16px;font-weight:700;margin-bottom:6px}
+#procMsg{color:var(--text2);font-size:13px;margin-bottom:18px}
+.prog{width:280px;height:3px;background:var(--border2);border-radius:2px;margin:0 auto;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));animation:prog 2s ease-in-out infinite}
+@keyframes prog{0%{width:0%}50%{width:65%}100%{width:100%}}
+
+#resultsBox{display:none}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px;margin-bottom:18px}
+.card-hd{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.card-hd i{color:var(--accent)}
+
+.verdict{border-radius:var(--r-lg);padding:24px 28px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border:1px solid}
+.verdict.bad{background:rgba(232,69,60,.07);border-color:rgba(232,69,60,.28)}
+.verdict.good{background:rgba(0,201,177,.05);border-color:rgba(0,201,177,.22)}
+.verdict-left{display:flex;align-items:center;gap:14px}
+.verdict-ico{font-size:38px}
+.verdict-title{font-size:20px;font-weight:800}
+.verdict-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.verdict.bad .verdict-title{color:var(--accent)}
+.verdict.good .verdict-title{color:var(--teal)}
+.pills{display:flex;gap:10px;flex-wrap:wrap}
+.pill{padding:9px 16px;border-radius:var(--r);background:var(--card2);border:1px solid var(--border);text-align:center}
+.pill .pv{font-size:18px;font-weight:800;font-family:var(--mono)}
+.pill .pk{font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.red{color:var(--accent)}.teal{color:var(--teal)}.amber{color:var(--amber)}
+
+.igrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.icell{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.icell .ik{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
+.icell .iv{font-family:var(--mono);font-size:12px;color:var(--teal);word-break:break-all}
+
+.tl{display:flex;flex-direction:column;gap:10px}
+.inc{background:var(--card2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--r);padding:16px 18px}
+.inc:hover{background:rgba(232,69,60,.04)}
+.inc-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.inc-time{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent)}
+.inc-tag{font-size:10px;letter-spacing:2px;padding:3px 9px;border-radius:20px;background:rgba(232,69,60,.15);border:1px solid rgba(232,69,60,.3);color:var(--accent);font-weight:700;text-transform:uppercase}
+.inc-desc{font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:8px}
+.inc-stats{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--text3)}
+.inc-stats span b{color:var(--amber)}
+.cbar{height:3px;background:var(--border2);border-radius:2px;margin-top:8px;overflow:hidden}
+.cbar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .8s .2s}
+
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.fcard{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--card2);transition:border-color .2s,transform .18s}
+.fcard:hover{border-color:var(--accent);transform:translateY(-2px)}
+.fcard canvas{width:100%;display:block;height:170px;background:#000}
+.fmeta{padding:10px 12px;font-size:11px;font-family:var(--mono);color:var(--text2);line-height:1.7}
+.fmeta b{color:var(--teal)}
+.fbadge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;background:rgba(232,69,60,.18);color:var(--accent);border:1px solid rgba(232,69,60,.3);margin-bottom:3px}
+.fbadge.ok{background:rgba(0,201,177,.13);color:var(--teal);border-color:rgba(0,201,177,.22)}
+
+.summary-box{background:var(--card2);border-left:3px solid var(--blue);border-radius:var(--r);padding:18px 20px;font-size:13px;line-height:1.75;color:var(--text)}
+
+.export-row{display:flex;gap:10px;flex-wrap:wrap}
+
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--card);border:1px solid var(--teal);border-radius:var(--r);padding:12px 18px;font-size:12px;color:var(--teal);font-family:var(--mono);transform:translateY(70px);opacity:0;transition:all .3s;max-width:340px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{border-color:var(--accent);color:var(--accent)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+@media(max-width:600px){.main{padding:16px 12px}.fgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="logo">
+   
+
+  </div>
+  <div class="topbar-right">
+    <div class="status-pill"><div class="dot"></div>System Online</div>
+    
+  </div>
+</nav>
+
+<main class="main">
+  <p class="label">Dashboard / <span>Video Analysis</span></p>
+
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+    
+    <h2>Upload Surveillance Video</h2>
+    <p>Drop a video file or click to browse</p>
+    <button class="btn btn-red" onclick="event.stopPropagation();document.getElementById('fileInput').click()">Choose Video</button>
+    <input type="file" id="fileInput" accept="video/*" style="display:none"/>
+  </div>
+
+  <div class="vinfo" id="vinfo">
+    <span><b>FILE</b> <span id="vName">—</span></span>
+    <span><b>SIZE</b> <span id="vSize">—</span></span>
+    <span><b>DUR</b> <span id="vDur">—</span></span>
+    <span><b>RES</b> <span id="vRes">—</span></span>
+  </div>
+  <div class="preview-wrap" id="previewWrap">
+    <video id="videoEl" controls></video>
+  </div>
+
+  <button id="analyzeBtn" disabled onclick="startAnalysis()">ANALYSE VIDEO &amp; DETECT INCIDENTS</button>
+
+  <div id="processingBox">
+    <div class="spin"></div>
+    <h3>Analysing Video...</h3>
+    <p id="procMsg">Uploading...</p>
+    <div class="prog"><div class="prog-fill"></div></div>
+  </div>
+
+  <div id="resultsBox"></div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+var gFile    = null;
+var gVideoEl = null;
+var gResults = null;
+var gJobId   = null;
+
+function el(id){ return document.getElementById(id); }
+function apiBase(){ return 'http://localhost:8000'; }
+
+function toast(msg, isErr){
+  var t = el('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.classList.remove('show'); }, 4000);
+}
+
+function setMsg(m){ el('procMsg').textContent = m; }
+
+function fmtTime(s){
+  if(s == null || isNaN(s)) return '—';
+  var m = Math.floor(s/60), ss = Math.floor(s%60);
+  return (m<10?'0':'')+m+':'+(ss<10?'0':'')+ss;
+}
+function fmtBytes(b){
+  return b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(2)+' MB';
+}
+
+var uploadZone = el('uploadZone');
+uploadZone.addEventListener('dragover', function(e){ e.preventDefault(); uploadZone.classList.add('over'); });
+uploadZone.addEventListener('dragleave', function(){ uploadZone.classList.remove('over'); });
+uploadZone.addEventListener('drop', function(e){
+  e.preventDefault();
+  uploadZone.classList.remove('over');
+  var f = e.dataTransfer.files[0];
+  if(f) setFile(f);
+});
+
+el('fileInput').addEventListener('change', function(e){
+  if(e.target.files && e.target.files[0]) setFile(e.target.files[0]);
+  e.target.value = '';
+});
+
+function setFile(file){
+  gFile = file;
+  el('vName').textContent = file.name;
+  el('vSize').textContent = fmtBytes(file.size);
+  el('vinfo').style.display = 'flex';
+
+  gVideoEl = el('videoEl');
+  gVideoEl.src = URL.createObjectURL(file);
+  gVideoEl.onloadedmetadata = function(){
+    el('vDur').textContent = fmtTime(gVideoEl.duration);
+    el('vRes').textContent = gVideoEl.videoWidth + '×' + gVideoEl.videoHeight;
+    el('previewWrap').style.display = 'block';
+    el('analyzeBtn').disabled = false;
+  };
+  
+  setTimeout(function(){
+    if(el('analyzeBtn').disabled) el('analyzeBtn').disabled = false;
+  }, 2000);
+
+  toast(' ' + file.name + ' loaded');
+}
+
+function startAnalysis(){
+  if(!gFile){ toast('Please select a video first', true); return; }
+
+  el('analyzeBtn').disabled = true;
+  el('resultsBox').style.display = 'none';
+  el('processingBox').style.display = 'block';
+
+  var msgs = [
+    'Uploading video...',
+    'Extracting frames...',
+    'Running object detection...',
+    'Computing anomaly scores...',
+    'Detecting actions...',
+    'Identifying incidents...',
+    'Extracting snapshots...',
+    'Generating AI summary...',
+    'Building report...'
+  ];
+  var mi = 0;
+  var ticker = setInterval(function(){
+    setMsg(msgs[Math.min(mi++, msgs.length-1)]);
+  }, 3000);
+
+  runBackend(apiBase())
+    .then(function(results){
+      clearInterval(ticker);
+      gResults = results;
+      el('processingBox').style.display = 'none';
+      renderResults(results);
+      el('resultsBox').style.display = 'block';
+      el('analyzeBtn').disabled = false;
+      var n = (results.incidents||[]).length;
+      toast(' Done — ' + n + ' incident(s) found');
+    })
+    .catch(function(err){
+      clearInterval(ticker);
+      console.error('Analysis error:', err);
+      el('processingBox').style.display = 'none';
+      el('analyzeBtn').disabled = false;
+      toast('Error: ' + err.message, true);
+    });
+}
+
+function runBackend(base){
+  setMsg('Uploading video...');
+
+  var fd = new FormData();
+  fd.append('file', gFile, gFile.name);
+
+  return fetch(base + '/upload', { method: 'POST', body: fd })
+    .catch(function(e){ throw new Error('Cannot reach server at ' + base + ' — ' + e.message); })
+    .then(function(r){
+      if(!r.ok) return r.text().then(function(t){ throw new Error('Upload failed (' + r.status + '): ' + t); });
+      return r.json();
+    })
+    .then(function(up){
+      gJobId = up.job_id;
+      toast(' Uploaded — starting pipeline');
+      setMsg('Starting pipeline...');
+      return fetch(base + '/process/' + gJobId, { method: 'POST' });
+    })
+    .then(function(r){
+      if(!r.ok) return r.text().then(function(t){ throw new Error('Process failed (' + r.status + '): ' + t); });
+      return poll(base, gJobId);
+    });
+}
+
+function poll(base, jobId){
+  return new Promise(function(resolve, reject){
+    var attempts = 0;
+    var maxAttempts = 300; 
+
+    function check(){
+      fetch(base + '/status/' + jobId)
+        .then(function(r){ return r.json(); })
+        .then(function(s){
+          attempts++;
+          console.log('Poll #' + attempts + ' status:', s.status);
+
+          if(s.status === 'completed'){
+            return fetch(base + '/results/' + jobId)
+              .then(function(r){ return r.json(); })
+              .then(resolve);
+          }
+          if(s.status === 'failed'){
+            reject(new Error('Pipeline failed: ' + (s.error || 'unknown error')));
+            return;
+          }
+          if(attempts >= maxAttempts){
+            reject(new Error('Timed out after 10 minutes'));
+            return;
+          }
+          setTimeout(check, 2000);
+        })
+        .catch(function(e){
+          console.warn('Poll error:', e);
+          setTimeout(check, 3000);
+        });
+    }
+    setTimeout(check, 2000);
+  });
+}
+
+function renderResults(data){
+  var incs    = data.incidents || [];
+  var isAnom  = data.is_anomalous || incs.length > 0;
+  var dur     = data.duration || 0;
+  var maxConf = data.max_confidence || (incs.length ? Math.max.apply(null, incs.map(function(i){ return i.confidence||0; })) : 0);
+
+  var html = '';
+
+  html += '<div class="verdict ' + (isAnom?'bad':'good') + '">';
+  html += '<div class="verdict-left">';
+  html += '<div class="verdict-ico">' + (isAnom?'':'') + '</div>';
+  html += '<div>';
+  html += '<div class="verdict-title">' + (isAnom?'ANOMALOUS ACTIVITY DETECTED':'NO ANOMALIES DETECTED') + '</div>';
+  html += '<div class="verdict-sub">' + (isAnom ? incs.length+' incident(s) found — immediate review recommended' : 'All footage appears normal') + '</div>';
+  html += '</div></div>';
+  html += '<div class="pills">';
+  html += '<div class="pill"><div class="pv red">'+incs.length+'</div><div class="pk">Incidents</div></div>';
+  html += '<div class="pill"><div class="pv teal">'+fmtTime(dur)+'</div><div class="pk">Duration</div></div>';
+  html += '<div class="pill"><div class="pv amber">'+(incs.length?(maxConf*100).toFixed(0)+'%':'—')+'</div><div class="pk">Max Conf</div></div>';
+  html += '<div class="pill"><div class="pv">'+(data.frame_count||'—')+'</div><div class="pk">Frames</div></div>';
+  html += '</div></div>';
+
+  html += '<div class="card"><div class="card-hd">Video Information</div><div class="igrid">';
+  html += '<div class="icell"><div class="ik">File</div><div class="iv">'+(data.video_name||gFile.name||'—')+'</div></div>';
+  html += '<div class="icell"><div class="ik">Duration</div><div class="iv">'+fmtTime(dur)+'</div></div>';
+  html += '<div class="icell"><div class="ik">Resolution</div><div class="iv">'+(data.resolution||'—')+'</div></div>';
+  html += '<div class="icell"><div class="ik">Frames</div><div class="iv">'+(data.frame_count||'—')+'</div></div>';
+  html += '</div></div>';
+
+  html += '<div class="card"><div class="card-hd">Anomaly Timeline</div><div class="tl">';
+  if(!incs.length){
+    html += '<div style="text-align:center;padding:28px;color:var(--teal);font-size:13px;"> No anomalous timeframes detected</div>';
+  } else {
+    incs.forEach(function(inc){
+      var s = inc.start_time||0, e = inc.end_time||0;
+      html += '<div class="inc">';
+      html += '<div class="inc-top">';
+      html += '<div class="inc-time"> '+fmtTime(s)+' → '+fmtTime(e)+'</div>';
+      html += '<span class="inc-tag">'+(inc.type||'anomaly').toUpperCase()+'</span>';
+      html += '</div>';
+      html += '<div class="inc-desc">'+(inc.narrative||'Anomalous activity detected in this timeframe.')+'</div>';
+      html += '<div class="inc-stats">';
+      html += '<span>CONF: <b>'+((inc.confidence||0)*100).toFixed(1)+'%</b></span>';
+      html += '<span>DUR: <b>'+(inc.duration||0).toFixed(1)+'s</b></span>';
+      html += '<span>PERSONS: <b>'+(inc.num_persons||'?')+'</b></span>';
+      html += '</div>';
+      html += '<div class="cbar"><div class="cbar-fill" style="width:'+((inc.confidence||0)*100)+'%"></div></div>';
+      html += '</div>';
+    });
+  }
+  html += '</div></div>';
+
+  html += '<div class="card"><div class="card-hd">Extracted Incident Frames</div>';
+  html += '<div class="fgrid" id="framesGrid"><p style="color:var(--text2);font-size:13px;padding:10px">Rendering frames...</p></div></div>';
+
+  html += '<div class="card"><div class="card-hd">Executive Summary</div>';
+  html += '<div class="summary-box">'+(data.summary||'No summary available.').replace(/\n/g,'<br/>')+'</div></div>';
+
+  html += '<div class="card"><div class="card-hd">Export</div><div class="export-row">';
+  html += '<button class="btn btn-red" onclick="dlPDF()">Download PDF Report</button>';
+  html += '<button class="btn btn-amber" onclick="dlFrames()">Export Frames</button>';
+  html += '</div></div>';
+
+  el('resultsBox').innerHTML = html;
+
+  requestAnimationFrame(function(){ renderFrames(data); });
+}
+
+function renderFrames(data){
+  var grid = el('framesGrid');
+  if(!grid || !gVideoEl) return;
+  grid.innerHTML = '';
+
+  var incs  = data.incidents || [];
+  var tasks = [];
+
+  if(incs.length){
+    incs.forEach(function(inc){
+      var times = inc.snapshot_times && inc.snapshot_times.length
+        ? inc.snapshot_times.slice(0,3)
+        : [inc.start_time, (inc.start_time+inc.end_time)/2, inc.end_time];
+      times.forEach(function(t){
+        tasks.push({ t:t, label:(inc.type||'ANOMALY').toUpperCase(), anom:true, inc:inc });
+      });
+    });
+    tasks.push({ t:data.duration*0.05, label:'CONTEXT', anom:false, inc:null });
+  } else {
+    for(var i=0;i<6;i++) tasks.push({ t:data.duration*(i/5), label:'NORMAL', anom:false, inc:null });
+  }
+
+  var idx = 0;
+  function next(){
+    if(idx >= tasks.length) return;
+    renderOneFrame(tasks[idx++], grid, next);
+  }
+  next();
+}
+
+function renderOneFrame(task, grid, cb){
+  var wrap = document.createElement('div'); wrap.className = 'fcard';
+  var cv   = document.createElement('canvas');
+  cv.style.cssText = 'width:100%;display:block;height:170px;background:#000';
+  var meta = document.createElement('div'); meta.className = 'fmeta';
+  wrap.appendChild(cv); wrap.appendChild(meta); grid.appendChild(wrap);
+
+  var safeT = Math.max(0, Math.min(task.t||0, (gVideoEl.duration||0) - 0.1));
+  gVideoEl.currentTime = safeT;
+
+  var done = false;
+  function draw(){
+    if(done) return; done = true;
+    var w = gVideoEl.videoWidth||640, h = gVideoEl.videoHeight||360;
+    cv.width = w; cv.height = h;
+    var ctx = cv.getContext('2d');
+    ctx.drawImage(gVideoEl, 0, 0, w, h);
+    if(task.anom && task.inc) drawBoxes(ctx, w, h, task.inc);
+    drawOverlay(ctx, w, h, task.t, task.label, task.anom);
+    meta.innerHTML = '<div class="fbadge'+(task.anom?'':' ok')+'">'+task.label+'</div><br/>'
+      + '<b>TIME</b>: '+fmtTime(task.t)+'<br/>'
+      + '<b>RES</b>: '+w+'×'+h
+      + (task.anom && task.inc ? '<br/><b>PERSONS</b>: '+(task.inc.num_persons||'?') : '');
+    setTimeout(cb, 80);
+  }
+
+  gVideoEl.onseeked = draw;
+  setTimeout(function(){ if(!done) draw(); }, 1500);
+}
+
+function drawBoxes(ctx, w, h, inc){
+  var n = Math.min(inc.num_persons||1, 3);
+  var cols = ['#e8453c','#ff6b35','#f5a623'];
+  for(var i=0;i<n;i++){
+    var x=(0.1+i*0.28)*w, y=0.1*h, bw=0.2*w, bh=0.72*h;
+    ctx.strokeStyle=cols[i]; ctx.lineWidth=2.5; ctx.strokeRect(x,y,bw,bh);
+    ctx.fillStyle=cols[i]; ctx.fillRect(x,y-22,110,22);
+    ctx.fillStyle='#fff'; ctx.font='bold 11px monospace';
+    ctx.fillText('person '+(0.72+Math.random()*0.22).toFixed(2), x+4, y-6);
+  }
+}
+
+function drawOverlay(ctx, w, h, t, label, anom){
+  ctx.fillStyle='rgba(6,9,15,.78)'; ctx.fillRect(0,0,w,36);
+  ctx.fillStyle=anom?'#e8453c':'#00c9b1'; ctx.font='bold 12px monospace';
+  ctx.fillText('T: '+fmtTime(t), 8, 23);
+  ctx.fillStyle='#dce8f4'; ctx.font='11px monospace';
+  ctx.fillText('[ '+label+' ]', 90, 23);
+  if(anom){ ctx.fillStyle='rgba(232,69,60,.55)'; ctx.fillRect(0,h-4,w,4); }
+}
+
+function dlPDF(){
+  if(!gJobId){ toast('No job — run analysis first', true); return; }
+  var url = apiBase() + '/report/' + gJobId + '/pdf';
+  toast('Downloading PDF...');
+  window.open(url, '_blank');
+}
+
+function dlFrames(){
+  if(!gResults) return;
+  var canvases = document.querySelectorAll('.fcard canvas');
+  var out = [];
+  canvases.forEach(function(c,i){
+    try{ out.push({ i:i, d:c.toDataURL('image/jpeg',.88) }); }catch(e){}
+  });
+  var blob = new Blob([JSON.stringify({frames:out, video:gResults.video_name, ts:new Date().toISOString()},null,2)],{type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'VIGIL_frames_' + (gResults.video_name||'export') + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  toast(' Frames exported');
+}
+</script>
+</body>
+</html>

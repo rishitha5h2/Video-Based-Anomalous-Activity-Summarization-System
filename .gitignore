@@ -1,0 +1,9 @@
+data/outputs/ 
+*.pt 
+*.pdf 
+data/outputs/ 
+*.pt 
+data/outputs/ 
+*.pt 
+*.pdf 
+.env 

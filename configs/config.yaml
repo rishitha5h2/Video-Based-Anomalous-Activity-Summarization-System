@@ -1,0 +1,83 @@
+project:
+  name: VIGIL
+  version: "1.0.0"
+  description: Video-Based Anomalous Activity Summarization System
+
+dataset:
+  name: ucf-crime-dataset
+  kaggle_id: odins0n/ucf-crime-dataset
+  categories:
+    - Abuse
+    - Arrest
+    - Arson
+    - Assault
+    - Burglary
+    - Explosion
+    - Fighting
+    - RoadAccidents
+    - Robbery
+    - Shooting
+    - Shoplifting
+    - Stealing
+    - Vandalism
+    - Normal_Videos
+
+detection:
+  yolo_model: yolov8x.pt
+  yolo_confidence: 0.4
+  yolo_iou: 0.5
+  target_classes:
+    - person
+    - knife
+    - gun
+    - car
+    - truck
+    - bottle
+    - chair
+
+preprocessing:
+  target_width: 640
+  target_height: 360
+  fps: 5
+  max_frames: 300
+  normalize: true
+
+anomaly:
+  latent_dim: 128
+  reconstruction_threshold: 0.6
+  window_size: 30
+
+tracking:
+  max_age: 30
+  min_hits: 3
+  iou_threshold: 0.3
+
+incident:
+  min_duration_seconds: 2.0
+  merge_gap_seconds: 3.0
+  confidence_threshold: 0.5
+  snapshot_count: 5
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  max_upload_mb: 500
+  allowed_extensions:
+    - .mp4
+    - .avi
+    - .mkv
+    - .mov
+
+reporting:
+  pdf_dpi: 150
+  max_frames_in_report: 10
+  include_bboxes: true
+  include_timeline: true
+
+paths:
+  data_dir: data/
+  models_dir: models/weights/
+  outputs_dir: data/outputs/
+  reports_dir: data/outputs/reports/
+  frames_dir: data/outputs/incident_frames/
+  videos_dir: data/outputs/annotated_videos/
